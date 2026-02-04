@@ -1,0 +1,105 @@
+from pydantic import BaseModel, Field, EmailStr
+from typing import List, Optional
+from datetime import datetime
+import uuid
+
+# User Models
+class UserCreate(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+class User(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    email: str
+    password_hash: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class UserResponse(BaseModel):
+    id: str
+    name: str
+    email: str
+
+# Position Models
+class PositionCreate(BaseModel):
+    symbol: str
+    type: str  # "stock" or "crypto"
+    quantity: float
+    avg_price: float
+
+class Position(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    symbol: str
+    name: str
+    type: str
+    quantity: float
+    avg_price: float
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class PositionWithMetrics(Position):
+    current_price: float
+    total_value: float
+    invested: float
+    gain_loss: float
+    gain_loss_percent: float
+    weight: float
+    beta: float
+    volatility: float
+    last_update: str
+
+# Transaction Models
+class TransactionCreate(BaseModel):
+    symbol: str
+    type: str  # "buy" or "sell"
+    quantity: float
+    price: float
+
+class Transaction(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    symbol: str
+    type: str
+    quantity: float
+    price: float
+    total: float
+    date: datetime = Field(default_factory=datetime.utcnow)
+
+# Portfolio Models
+class PortfolioSummary(BaseModel):
+    total_value: float
+    total_invested: float
+    total_gain_loss: float
+    gain_loss_percent: float
+    daily_change: float
+    daily_change_percent: float
+    volatility: dict
+    beta: float
+    sharpe_ratio: float
+
+# Analytics Models
+class CorrelationItem(BaseModel):
+    symbol1: str
+    symbol2: str
+    correlation: float
+
+class Recommendation(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    type: str  # "warning", "info", "success"
+    title: str
+    description: str
+    priority: str  # "high", "medium", "low"
+
+class MarketQuote(BaseModel):
+    symbol: str
+    name: str
+    price: float
+    change: float
+    change_percent: float
+    volume: int
