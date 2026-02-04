@@ -12,10 +12,14 @@ from models import (
     UserCreate, UserLogin, User, UserResponse,
     PositionCreate, Position, PositionWithMetrics,
     TransactionCreate, Transaction,
-    PortfolioSummary, CorrelationItem, Recommendation
+    PortfolioSummary, CorrelationItem, Recommendation,
+    PerformanceResponse, DividendCreate, Dividend,
+    AlertCreate, Alert, GoalCreate, Goal,
+    NoteCreate, Note, BudgetCreate, Budget
 )
 from utils.yahoo_finance import YahooFinanceService
 from utils.portfolio_analytics import PortfolioAnalytics
+from utils.performance_service import PerformanceService
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
