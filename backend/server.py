@@ -20,6 +20,8 @@ from models import (
 from utils.yahoo_finance import YahooFinanceService
 from utils.portfolio_analytics import PortfolioAnalytics
 from utils.performance_service import PerformanceService
+from utils.sector_analysis import SectorAnalysisService
+from utils.alert_manager import AlertManager
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
