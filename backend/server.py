@@ -280,7 +280,17 @@ async def get_recommendations(user_id: str):
 @api_router.get("/transactions")
 async def get_transactions(user_id: str):
     transactions = await db.transactions.find({"user_id": user_id}).sort("date", -1).to_list(1000)
-    return transactions
+    
+    # Clean transactions to remove MongoDB _id and convert datetime
+    clean_transactions = []
+    for txn in transactions:
+        clean_txn = {k: v for k, v in txn.items() if k != '_id'}
+        # Convert datetime objects to ISO strings
+        if 'date' in clean_txn:
+            clean_txn['date'] = clean_txn['date'].isoformat()
+        clean_transactions.append(clean_txn)
+    
+    return clean_transactions
 
 # Market data
 @api_router.get("/market/quote/{symbol}")
