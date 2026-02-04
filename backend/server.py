@@ -404,6 +404,30 @@ async def compare_with_index(user_id: str, period: str = 'ytd', index: str = '^G
     
     return comparison
 
+# Sector analysis
+@api_router.get("/analytics/sector-distribution")
+async def get_sector_distribution(user_id: str):
+    \"\"\"Get sector distribution of portfolio\"\"\"
+    positions = await db.positions.find({"user_id": user_id}).to_list(1000)
+    
+    if not positions:
+        return []
+    
+    # Enrich with current prices
+    enriched_positions = []
+    for pos in positions:
+        current_price = yf_service.get_current_price(pos['symbol'])
+        if current_price:
+            total_value = pos['quantity'] * current_price
+            enriched_positions.append({
+                'symbol': pos['symbol'],
+                'type': pos['type'],
+                'total_value': total_value
+            })
+    
+    distribution = sector_service.calculate_sector_distribution(enriched_positions)
+    return distribution
+
 # Dividends endpoints
 @api_router.get("/dividends")
 async def get_dividends(user_id: str):
