@@ -595,6 +595,91 @@ async def create_or_update_budget(budget_data: BudgetCreate, user_id: str):
         await db.budgets.insert_one(budget.dict())
         return budget
 
+# Portfolio Management endpoints (Multi-portfolio)
+@api_router.get("/portfolios")
+async def get_portfolios(user_id: str):
+    """Get all portfolios for a user"""
+    portfolios = await db.portfolios.find({"user_id": user_id}).to_list(100)
+    
+    # If no portfolios exist, create a default one
+    if not portfolios:
+        default_portfolio = Portfolio(
+            user_id=user_id,
+            name="Portefeuille Principal",
+            description="Mon portefeuille par défaut",
+            is_default=True
+        )
+        await db.portfolios.insert_one(default_portfolio.dict())
+        portfolios = [default_portfolio.dict()]
+    
+    # Clean MongoDB _id
+    clean_portfolios = []
+    for p in portfolios:
+        clean_p = {k: v for k, v in p.items() if k != '_id'}
+        if 'created_at' in clean_p and hasattr(clean_p['created_at'], 'isoformat'):
+            clean_p['created_at'] = clean_p['created_at'].isoformat()
+        clean_portfolios.append(clean_p)
+    
+    return clean_portfolios
+
+@api_router.post("/portfolios")
+async def create_portfolio(portfolio_data: PortfolioCreate, user_id: str):
+    """Create a new portfolio"""
+    portfolio = Portfolio(
+        user_id=user_id,
+        name=portfolio_data.name,
+        description=portfolio_data.description,
+        is_default=False
+    )
+    
+    await db.portfolios.insert_one(portfolio.dict())
+    
+    return {
+        "id": portfolio.id,
+        "user_id": portfolio.user_id,
+        "name": portfolio.name,
+        "description": portfolio.description,
+        "created_at": portfolio.created_at.isoformat(),
+        "is_default": portfolio.is_default
+    }
+
+@api_router.put("/portfolios/{portfolio_id}")
+async def update_portfolio(portfolio_id: str, portfolio_data: PortfolioCreate, user_id: str):
+    """Update an existing portfolio"""
+    result = await db.portfolios.update_one(
+        {"id": portfolio_id, "user_id": user_id},
+        {"$set": {"name": portfolio_data.name, "description": portfolio_data.description}}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Portefeuille non trouvé")
+    return {"message": "Portefeuille mis à jour avec succès"}
+
+@api_router.delete("/portfolios/{portfolio_id}")
+async def delete_portfolio(portfolio_id: str, user_id: str):
+    """Delete a portfolio and all its positions"""
+    # Check if it's the only portfolio
+    portfolios = await db.portfolios.find({"user_id": user_id}).to_list(100)
+    if len(portfolios) <= 1:
+        raise HTTPException(status_code=400, detail="Impossible de supprimer le dernier portefeuille")
+    
+    # Check if this is the default portfolio
+    portfolio = await db.portfolios.find_one({"id": portfolio_id, "user_id": user_id})
+    if portfolio and portfolio.get("is_default"):
+        raise HTTPException(status_code=400, detail="Impossible de supprimer le portefeuille par défaut")
+    
+    # Delete all positions in this portfolio
+    await db.positions.delete_many({"portfolio_id": portfolio_id, "user_id": user_id})
+    
+    # Delete all transactions in this portfolio
+    await db.transactions.delete_many({"portfolio_id": portfolio_id, "user_id": user_id})
+    
+    # Delete the portfolio
+    result = await db.portfolios.delete_one({"id": portfolio_id, "user_id": user_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Portefeuille non trouvé")
+    
+    return {"message": "Portefeuille supprimé avec succès"}
+
 # Include the router in the main app
 app.include_router(api_router)
 
