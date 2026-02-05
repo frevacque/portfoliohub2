@@ -99,8 +99,13 @@ async def login(credentials: UserLogin):
 
 # Positions
 @api_router.get("/positions")
-async def get_positions(user_id: str):
-    positions = await db.positions.find({"user_id": user_id}).to_list(1000)
+async def get_positions(user_id: str, portfolio_id: Optional[str] = None):
+    # Build query based on portfolio_id
+    query = {"user_id": user_id}
+    if portfolio_id:
+        query["portfolio_id"] = portfolio_id
+    
+    positions = await db.positions.find(query).to_list(1000)
     
     # Enrich with current market data and metrics
     enriched_positions = []
@@ -157,9 +162,33 @@ async def add_position(position_data: PositionCreate, user_id: str):
     # Use provided purchase_date or default to now
     purchase_date = position_data.purchase_date if position_data.purchase_date else datetime.utcnow()
     
+    # Get portfolio_id - use provided one or get the default portfolio
+    portfolio_id = position_data.portfolio_id
+    if not portfolio_id:
+        # Find or create default portfolio
+        default_portfolio = await db.portfolios.find_one({"user_id": user_id, "is_default": True})
+        if not default_portfolio:
+            # Get first portfolio or create one
+            first_portfolio = await db.portfolios.find_one({"user_id": user_id})
+            if first_portfolio:
+                portfolio_id = first_portfolio['id']
+            else:
+                # Create default portfolio
+                new_portfolio = Portfolio(
+                    user_id=user_id,
+                    name="Portefeuille Principal",
+                    description="Mon portefeuille par défaut",
+                    is_default=True
+                )
+                await db.portfolios.insert_one(new_portfolio.dict())
+                portfolio_id = new_portfolio.id
+        else:
+            portfolio_id = default_portfolio['id']
+    
     # Create position
     position = Position(
         user_id=user_id,
+        portfolio_id=portfolio_id,
         symbol=position_data.symbol.upper(),
         name=ticker_info['name'],
         type=position_data.type,
