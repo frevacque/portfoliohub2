@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Download, Upload, FileText, Calendar, DollarSign, Target, TrendingUp, X, Plus, AlertCircle, CheckCircle } from 'lucide-react';
+import { Download, Upload, DollarSign, Target, AlertCircle, CheckCircle } from 'lucide-react';
 import { portfolioAPI, storage } from '../api';
 import axios from 'axios';
 
@@ -21,14 +21,12 @@ const Tools = () => {
     return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
   };
 
-  // Export to CSV
   const handleExportCSV = async () => {
     try {
       setLoading(true);
       const positions = await portfolioAPI.getPositions(userId);
       const transactions = await axios.get(`${API}/transactions?user_id=${userId}`);
 
-      // Create CSV content
       let csv = 'Type,Symbole,Nom,Quantité,Prix Moyen,Valeur Actuelle,Gain/Perte,Bêta,Volatilité\n';
       positions.forEach(pos => {
         csv += `Position,${pos.symbol},${pos.name},${pos.quantity},${pos.avg_price},${pos.total_value},${pos.gain_loss},${pos.beta},${pos.volatility}\n`;
@@ -39,7 +37,6 @@ const Tools = () => {
         csv += `${t.type},${t.symbol},${t.quantity},${t.price},${t.total},${new Date(t.date).toLocaleDateString('fr-FR')}\n`;
       });
 
-      // Download
       const blob = new Blob([csv], { type: 'text/csv' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -54,7 +51,6 @@ const Tools = () => {
     }
   };
 
-  // Create/Update Budget
   const handleSaveBudget = async () => {
     try {
       setLoading(true);
@@ -75,11 +71,9 @@ const Tools = () => {
     }
   };
 
-  // Run Simulation
   const handleSimulation = async () => {
     try {
       setLoading(true);
-      // Get current price
       const quote = await axios.get(`${API}/market/quote/${simulation.symbol}`);
       const currentPrice = quote.data.price;
       const quantity = parseFloat(simulation.amount) / currentPrice;
@@ -91,7 +85,7 @@ const Tools = () => {
           quantity: quantity.toFixed(4),
           currentPrice: currentPrice,
           totalInvested: parseFloat(simulation.amount),
-          estimatedValue: parseFloat(simulation.amount) // Same at purchase
+          estimatedValue: parseFloat(simulation.amount)
         }
       });
     } catch (error) {
@@ -102,7 +96,40 @@ const Tools = () => {
     }
   };
 
-  // Import CSV
+  const parseCSVFile = (text) => {
+    const lines = text.split('\n').filter(l => l.trim());
+    const result = [];
+    let headers = null;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const vals = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+      
+      if (!headers) {
+        const lower = lines[i].toLowerCase();
+        if (lower.includes('symbol') || lower.includes('symbole')) {
+          headers = vals.map(h => h.toLowerCase());
+          continue;
+        }
+      }
+      
+      if (headers && vals.length >= 2) {
+        const sIdx = headers.findIndex(h => h.includes('symbol') || h.includes('symbole'));
+        const qIdx = headers.findIndex(h => h.includes('quant'));
+        const pIdx = headers.findIndex(h => h.includes('prix') || h.includes('price'));
+        
+        if (sIdx >= 0 && qIdx >= 0 && pIdx >= 0 && vals[sIdx] && vals[qIdx] && vals[pIdx]) {
+          result.push({
+            symbol: vals[sIdx],
+            quantity: vals[qIdx],
+            avg_price: vals[pIdx],
+            type: 'stock'
+          });
+        }
+      }
+    }
+    return result;
+  };
+
   const handleImportCSV = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -111,45 +138,7 @@ const Tools = () => {
       setLoading(true);
       setImportResult(null);
       const text = await file.text();
-      const lines = text.split('\n').filter(line => line.trim());
-      
-      const positions = [];
-      let headers = [];
-      let headerFound = false;
-      
-      lines.forEach((line, lineIndex) => {
-        const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
-        
-        if (!headerFound) {
-          const lowerLine = line.toLowerCase();
-          if (lowerLine.includes('symbol') || lowerLine.includes('symbole')) {
-            headers = values.map(h => h.toLowerCase());
-            headerFound = true;
-            return;
-          }
-        }
-        
-        if (headerFound && values.length >= 2) {
-          const symbolIdx = headers.findIndex(h => h.includes('symbol') || h.includes('symbole'));
-          const qtyIdx = headers.findIndex(h => h.includes('quant'));
-          const priceIdx = headers.findIndex(h => h.includes('prix') || h.includes('price') || h.includes('pru'));
-          
-          if (symbolIdx >= 0 && qtyIdx >= 0 && priceIdx >= 0) {
-            const symbol = values[symbolIdx];
-            const quantity = values[qtyIdx];
-            const avgPrice = values[priceIdx];
-            
-            if (symbol && quantity && avgPrice) {
-              positions.push({
-                symbol: symbol,
-                quantity: quantity,
-                avg_price: avgPrice,
-                type: 'stock'
-              });
-            }
-          }
-        }
-      });
+      const positions = parseCSVFile(text);
       
       if (positions.length === 0) {
         setImportResult({
@@ -159,7 +148,6 @@ const Tools = () => {
         return;
       }
       
-      // Send to API
       const response = await axios.post(`${API}/import/csv?user_id=${userId}`, positions);
       setImportResult({
         success: true,
@@ -167,7 +155,6 @@ const Tools = () => {
         errors: response.data.errors
       });
       
-      // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -183,22 +170,22 @@ const Tools = () => {
     }
   };
 
+  const tabs = [
+    { value: 'export', label: 'Export/Import', icon: Download },
+    { value: 'budget', label: 'Budget', icon: DollarSign },
+    { value: 'simulation', label: 'Simulation', icon: Target }
+  ];
+
   return (
     <div className="container" style={{ padding: '32px 24px' }}>
-      {/* Header */}
       <div style={{ marginBottom: '32px' }}>
         <h1 className="display-md" style={{ marginBottom: '8px' }}>Outils</h1>
         <p className="body-md" style={{ color: 'var(--text-muted)' }}>Export, budget, et simulations</p>
       </div>
 
-      {/* Tabs */}
       <div style={{ marginBottom: '32px' }}>
         <div style={{ display: 'flex', gap: '8px', background: 'var(--bg-secondary)', padding: '4px', borderRadius: '12px', flexWrap: 'wrap' }}>
-          {[
-            { value: 'export', label: 'Export/Import', icon: Download },
-            { value: 'budget', label: 'Budget', icon: DollarSign },
-            { value: 'simulation', label: 'Simulation', icon: Target }
-          ].map(tab => (
+          {tabs.map(tab => (
             <button
               key={tab.value}
               onClick={() => setActiveTab(tab.value)}
@@ -227,13 +214,11 @@ const Tools = () => {
         </div>
       </div>
 
-      {/* Export/Import Tab */}
       {activeTab === 'export' && (
         <div className="card">
           <h2 className="h2" style={{ marginBottom: '24px' }}>Export & Import</h2>
           
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-            {/* Export */}
             <div style={{ padding: '24px', background: 'var(--bg-tertiary)', borderRadius: '12px' }}>
               <div style={{ marginBottom: '16px' }}>
                 <Download size={32} color="var(--accent-primary)" />
@@ -247,20 +232,20 @@ const Tools = () => {
                 onClick={handleExportCSV}
                 disabled={loading}
                 style={{ width: '100%' }}
+                data-testid="export-csv-btn"
               >
                 <Download size={18} />
                 {loading ? 'Export en cours...' : 'Exporter en CSV'}
               </button>
             </div>
 
-            {/* Import */}
             <div style={{ padding: '24px', background: 'var(--bg-tertiary)', borderRadius: '12px' }}>
               <div style={{ marginBottom: '16px' }}>
                 <Upload size={32} color="var(--accent-primary)" />
               </div>
               <h3 className="h3" style={{ marginBottom: '8px' }}>Importer des données</h3>
               <p className="body-sm" style={{ marginBottom: '16px', color: 'var(--text-muted)' }}>
-                Importez vos positions depuis un fichier CSV. Format requis: Symbole, Quantité, Prix
+                Importez vos positions depuis un fichier CSV
               </p>
               <input
                 ref={fileInputRef}
@@ -274,6 +259,7 @@ const Tools = () => {
                 onClick={() => fileInputRef.current?.click()}
                 disabled={loading}
                 style={{ width: '100%' }}
+                data-testid="import-csv-btn"
               >
                 <Upload size={18} />
                 {loading ? 'Import en cours...' : 'Importer un CSV'}
@@ -298,11 +284,6 @@ const Tools = () => {
                     </span>
                   </div>
                   <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>{importResult.message}</p>
-                  {importResult.errors && importResult.errors.length > 0 && (
-                    <ul style={{ marginTop: '8px', paddingLeft: '16px', fontSize: '12px', color: 'var(--text-muted)' }}>
-                      {importResult.errors.map((err, i) => <li key={i}>{err}</li>)}
-                    </ul>
-                  )}
                 </div>
               )}
             </div>
@@ -310,7 +291,6 @@ const Tools = () => {
         </div>
       )}
 
-      {/* Budget Tab */}
       {activeTab === 'budget' && (
         <div className="card">
           <h2 className="h2" style={{ marginBottom: '24px' }}>Budget d'Investissement</h2>
@@ -370,7 +350,6 @@ const Tools = () => {
         </div>
       )}
 
-      {/* Simulation Tab */}
       {activeTab === 'simulation' && (
         <div className="card">
           <h2 className="h2" style={{ marginBottom: '24px' }}>Simulation d'Investissement</h2>
