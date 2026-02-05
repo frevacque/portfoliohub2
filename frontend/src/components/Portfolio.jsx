@@ -1,11 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, TrendingUp, TrendingDown, X, Trash2, Calendar, Briefcase } from 'lucide-react';
+import { Plus, Search, TrendingUp, TrendingDown, X, Trash2, Calendar, Briefcase, StickyNote, Save } from 'lucide-react';
 import { portfolioAPI, analyticsAPI, storage, portfoliosAPI } from '../api';
+import axios from 'axios';
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
 
 const Portfolio = () => {
   const [positions, setPositions] = useState([]);
   const [correlations, setCorrelations] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showNotesModal, setShowNotesModal] = useState(false);
+  const [selectedPosition, setSelectedPosition] = useState(null);
+  const [positionNotes, setPositionNotes] = useState([]);
+  const [newNote, setNewNote] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
