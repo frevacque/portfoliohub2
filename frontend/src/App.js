@@ -65,6 +65,7 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/portfolio" element={<Portfolio />} />
           <Route path="/portfolios" element={<Portfolios />} />
+          <Route path="/cash" element={<Cash />} />
           <Route path="/performance" element={<Performance />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/alerts" element={<Alerts />} />
