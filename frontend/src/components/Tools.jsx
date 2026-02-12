@@ -74,9 +74,20 @@ const Tools = () => {
   const handleSimulation = async () => {
     try {
       setLoading(true);
+      
+      // Get current portfolio value
+      const positions = await portfolioAPI.getPositions(userId);
+      const currentPortfolioValue = positions.reduce((sum, pos) => sum + (pos.total_value || 0), 0);
+      
+      // Get quote for the symbol
       const quote = await axios.get(`${API}/market/quote/${simulation.symbol}`);
       const currentPrice = quote.data.price;
       const quantity = parseFloat(simulation.amount) / currentPrice;
+      const investmentAmount = parseFloat(simulation.amount);
+      
+      // Calculate new portfolio value and percentage
+      const newPortfolioValue = currentPortfolioValue + investmentAmount;
+      const percentageOfPortfolio = (investmentAmount / newPortfolioValue) * 100;
 
       setSimulation({
         ...simulation,
@@ -84,8 +95,11 @@ const Tools = () => {
           symbol: simulation.symbol,
           quantity: quantity.toFixed(4),
           currentPrice: currentPrice,
-          totalInvested: parseFloat(simulation.amount),
-          estimatedValue: parseFloat(simulation.amount)
+          totalInvested: investmentAmount,
+          estimatedValue: investmentAmount,
+          currentPortfolioValue: currentPortfolioValue,
+          newPortfolioValue: newPortfolioValue,
+          percentageOfPortfolio: percentageOfPortfolio
         }
       });
     } catch (error) {
