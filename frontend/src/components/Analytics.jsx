@@ -179,53 +179,117 @@ const Analytics = () => {
       {activeTab === 'risk' && (
         <div className="card">
           <h2 className="h2" style={{ marginBottom: '24px' }}>Analyse Risque/Rendement</h2>
-          {riskReturnData.length > 0 ? (
+          {positions.length > 0 ? (
             <>
               <p className="body-sm" style={{ marginBottom: '24px', color: 'var(--text-muted)' }}>
                 Ce graphique positionne chaque titre selon sa volatilité (risque) et son rendement. La taille des bulles représente la valeur de la position.
               </p>
-              <ResponsiveContainer width="100%" height={450}>
-                <ScatterChart margin={{ top: 20, right: 20, bottom: 60, left: 60 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
-                  <XAxis 
-                    type="number" 
-                    dataKey="volatility" 
-                    name="Volatilité" 
-                    unit="%" 
-                    stroke="var(--text-muted)"
-                    tick={{ fill: 'var(--text-muted)' }}
-                    label={{ value: 'Volatilité (%)', position: 'insideBottom', offset: -10, fill: 'var(--text-secondary)' }}
-                  />
-                  <YAxis 
-                    type="number" 
-                    dataKey="return" 
-                    name="Rendement" 
-                    unit="%" 
-                    stroke="var(--text-muted)"
-                    tick={{ fill: 'var(--text-muted)' }}
-                    label={{ value: 'Rendement (%)', angle: -90, position: 'insideLeft', fill: 'var(--text-secondary)' }}
-                  />
-                  <ZAxis type="number" dataKey="value" range={[100, 1000]} />
-                  <Tooltip 
-                    cursor={{ strokeDasharray: '3 3' }}
-                    contentStyle={{ 
-                      background: 'var(--bg-secondary)', 
-                      border: '1px solid var(--border-primary)',
-                      borderRadius: '8px',
-                      color: 'var(--text-primary)'
-                    }}
-                    formatter={(value, name) => {
-                      if (name === 'value') return [formatCurrency(value), 'Valeur'];
-                      return [`${value.toFixed(2)}%`, name === 'volatility' ? 'Volatilité' : 'Rendement'];
-                    }}
-                  />
-                  <Scatter name="Positions" data={riskReturnData} fill="var(--accent-primary)">
-                    {riskReturnData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.return >= 0 ? 'var(--success)' : 'var(--danger)'} />
-                    ))}
-                  </Scatter>
-                </ScatterChart>
-              </ResponsiveContainer>
+              
+              {/* Summary Stats */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+                <div style={{ padding: '16px', background: 'var(--bg-tertiary)', borderRadius: '12px' }}>
+                  <div style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '4px' }}>Valeur Totale</div>
+                  <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--accent-primary)' }}>
+                    {formatCurrency(totalPortfolioValue)}
+                  </div>
+                </div>
+                <div style={{ padding: '16px', background: 'var(--bg-tertiary)', borderRadius: '12px' }}>
+                  <div style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '4px' }}>Nombre de Positions</div>
+                  <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                    {positions.length}
+                  </div>
+                </div>
+                <div style={{ padding: '16px', background: 'var(--bg-tertiary)', borderRadius: '12px' }}>
+                  <div style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '4px' }}>Rendement Moyen</div>
+                  <div style={{ fontSize: '24px', fontWeight: '700', color: positions.reduce((sum, p) => sum + (p.gain_loss_percent || 0), 0) / positions.length >= 0 ? 'var(--success)' : 'var(--danger)' }}>
+                    {(positions.reduce((sum, p) => sum + (p.gain_loss_percent || 0), 0) / positions.length).toFixed(2)}%
+                  </div>
+                </div>
+              </div>
+
+              {riskReturnData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={450}>
+                  <ScatterChart margin={{ top: 20, right: 20, bottom: 60, left: 60 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
+                    <XAxis 
+                      type="number" 
+                      dataKey="volatility" 
+                      name="Volatilité" 
+                      unit="%" 
+                      stroke="var(--text-muted)"
+                      tick={{ fill: 'var(--text-muted)' }}
+                      label={{ value: 'Volatilité (%)', position: 'insideBottom', offset: -10, fill: 'var(--text-secondary)' }}
+                    />
+                    <YAxis 
+                      type="number" 
+                      dataKey="return" 
+                      name="Rendement" 
+                      unit="%" 
+                      stroke="var(--text-muted)"
+                      tick={{ fill: 'var(--text-muted)' }}
+                      label={{ value: 'Rendement (%)', angle: -90, position: 'insideLeft', fill: 'var(--text-secondary)' }}
+                    />
+                    <ZAxis type="number" dataKey="value" range={[100, 1000]} />
+                    <Tooltip 
+                      cursor={{ strokeDasharray: '3 3' }}
+                      contentStyle={{ 
+                        background: 'var(--bg-secondary)', 
+                        border: '1px solid var(--border-primary)',
+                        borderRadius: '8px',
+                        color: 'var(--text-primary)'
+                      }}
+                      formatter={(value, name) => {
+                        if (name === 'value') return [formatCurrency(value), 'Valeur'];
+                        return [`${value.toFixed(2)}%`, name === 'volatility' ? 'Volatilité' : 'Rendement'];
+                      }}
+                    />
+                    <Scatter name="Positions" data={riskReturnData} fill="var(--accent-primary)">
+                      {riskReturnData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.return >= 0 ? 'var(--success)' : 'var(--danger)'} />
+                      ))}
+                    </Scatter>
+                  </ScatterChart>
+                </ResponsiveContainer>
+              ) : (
+                <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>
+                  Les données de volatilité sont en cours de calcul. Veuillez patienter ou rafraîchir la page.
+                </p>
+              )}
+
+              {/* Position Details Table */}
+              <div style={{ marginTop: '32px' }}>
+                <h3 className="h3" style={{ marginBottom: '16px' }}>Détail par Position</h3>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '2px solid var(--border-primary)' }}>
+                        <th style={{ padding: '12px', textAlign: 'left', color: 'var(--text-muted)', fontWeight: '600' }}>Symbole</th>
+                        <th style={{ padding: '12px', textAlign: 'right', color: 'var(--text-muted)', fontWeight: '600' }}>Valeur</th>
+                        <th style={{ padding: '12px', textAlign: 'right', color: 'var(--text-muted)', fontWeight: '600' }}>% Portefeuille</th>
+                        <th style={{ padding: '12px', textAlign: 'right', color: 'var(--text-muted)', fontWeight: '600' }}>Rendement</th>
+                        <th style={{ padding: '12px', textAlign: 'right', color: 'var(--text-muted)', fontWeight: '600' }}>Volatilité</th>
+                        <th style={{ padding: '12px', textAlign: 'right', color: 'var(--text-muted)', fontWeight: '600' }}>Beta</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {positions.map((pos, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                          <td style={{ padding: '12px', fontWeight: '600', color: 'var(--text-primary)' }}>{pos.symbol}</td>
+                          <td style={{ padding: '12px', textAlign: 'right', color: 'var(--text-primary)' }}>{formatCurrency(pos.total_value || 0)}</td>
+                          <td style={{ padding: '12px', textAlign: 'right', color: 'var(--accent-primary)', fontWeight: '600' }}>
+                            {totalPortfolioValue > 0 ? ((pos.total_value / totalPortfolioValue) * 100).toFixed(1) : 0}%
+                          </td>
+                          <td style={{ padding: '12px', textAlign: 'right', color: (pos.gain_loss_percent || 0) >= 0 ? 'var(--success)' : 'var(--danger)', fontWeight: '600' }}>
+                            {(pos.gain_loss_percent || 0) >= 0 ? '+' : ''}{(pos.gain_loss_percent || 0).toFixed(2)}%
+                          </td>
+                          <td style={{ padding: '12px', textAlign: 'right', color: 'var(--text-secondary)' }}>{(pos.volatility || 0).toFixed(1)}%</td>
+                          <td style={{ padding: '12px', textAlign: 'right', color: 'var(--text-secondary)' }}>{(pos.beta || 1).toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </>
           ) : (
             <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '48px' }}>Ajoutez des positions pour voir l'analyse risque/rendement</p>
