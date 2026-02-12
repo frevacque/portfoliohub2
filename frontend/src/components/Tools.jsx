@@ -431,6 +431,36 @@ const Tools = () => {
                     <span style={{ fontWeight: '700', fontSize: '18px', color: 'var(--text-primary)' }}>{formatCurrency(simulation.result.totalInvested)}</span>
                   </div>
                 </div>
+
+                {/* Portfolio Impact Section */}
+                <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '2px solid var(--accent-primary)' }}>
+                  <h4 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--accent-primary)', marginBottom: '16px' }}>
+                    📊 Impact sur votre portefeuille
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Portefeuille actuel:</span>
+                      <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{formatCurrency(simulation.result.currentPortfolioValue)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Après investissement:</span>
+                      <span style={{ fontWeight: '600', color: 'var(--success)' }}>{formatCurrency(simulation.result.newPortfolioValue)}</span>
+                    </div>
+                    <div style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      padding: '16px', 
+                      background: 'var(--accent-bg)', 
+                      borderRadius: '8px',
+                      marginTop: '8px'
+                    }}>
+                      <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>% du portefeuille:</span>
+                      <span style={{ fontWeight: '700', fontSize: '20px', color: 'var(--accent-primary)' }}>
+                        {simulation.result.percentageOfPortfolio.toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
